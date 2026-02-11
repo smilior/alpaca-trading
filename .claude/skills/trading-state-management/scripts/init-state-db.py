@@ -20,7 +20,6 @@ import sqlite3
 import sys
 from datetime import datetime
 
-
 SCHEMA_SQL = """
 -- ポジション管理
 CREATE TABLE IF NOT EXISTS positions (

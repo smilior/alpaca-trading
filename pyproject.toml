@@ -1,0 +1,26 @@
+[project]
+name = "alpaca-trading"
+version = "0.1.0"
+description = "Alpaca API を使った米国株自動売買システム"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=modules --cov-report=term-missing --cov-fail-under=80"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = ["alpaca.*", "yfinance.*", "fredapi.*", "exchange_calendars.*"]
+ignore_missing_imports = true
