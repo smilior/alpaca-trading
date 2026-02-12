@@ -15,13 +15,15 @@ import fcntl
 import json
 import logging
 import os
+import sqlite3
 import sys
 import time
 from datetime import date, datetime
 
-from modules.config import load_config
+from modules.config import AppConfig, load_config
 from modules.data_collector import collect_market_data
 from modules.db import init_db
+from modules.health import run_full_health_check
 from modules.llm_analyzer import get_trading_decisions
 from modules.logger import setup_logger
 from modules.macro import classify_vix_regime, determine_macro_regime
@@ -66,28 +68,12 @@ def is_market_open() -> bool:
         return True  # フォールバック: 実行を許可
 
 
-def run_health_check(state_manager: AlpacaStateManager) -> bool:
-    """ヘルスチェック: paper=true, API疎通確認。"""
+def run_health_check(config: AppConfig, conn: sqlite3.Connection) -> bool:
+    """包括的ヘルスチェック: paper, API, DB, 実行ログ, 回路ブレーカー, ディスク。"""
     logger.info("Running health check...")
-
-    # Paper trading確認
-    env_paper = os.environ.get("ALPACA_PAPER", "").lower()
-    if env_paper != "true":
-        logger.error("HEALTH CHECK FAILED: ALPACA_PAPER is not 'true'")
-        return False
-
-    # API疎通確認
-    try:
-        portfolio = state_manager.sync()
-        logger.info(
-            f"Health check OK: equity=${portfolio.equity:,.2f}, "
-            f"cash=${portfolio.cash:,.2f}, "
-            f"positions={len(portfolio.positions)}"
-        )
-        return True
-    except Exception as e:
-        logger.error(f"HEALTH CHECK FAILED: API connection error: {e}")
-        return False
+    report = run_full_health_check(config, conn)
+    logger.info(report.summary())
+    return report.all_ok
 
 
 def run_pipeline(mode: str) -> int:
@@ -123,7 +109,7 @@ def run_pipeline(mode: str) -> int:
     try:
         # === 3. ヘルスチェック ===
         if mode == "health_check":
-            success = run_health_check(state_manager)
+            success = run_health_check(config, conn)
             status = "success" if success else "error"
             _finalize_execution(state_manager, execution_id, mode, status, start_time)
             conn.close()

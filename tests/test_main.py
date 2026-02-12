@@ -22,6 +22,9 @@ from modules.types import (
     TradingDecision,
 )
 
+# _make_state_manager は TestRunHealthCheck のリファクタ後は不要だが、
+# 他のテストで必要になる可能性を残すためファイル末尾に配置
+
 
 class TestParseArgs:
     def test_valid_modes(self):
@@ -63,43 +66,27 @@ class TestIsMarketOpen:
 
 
 class TestRunHealthCheck:
-    def test_success(self, sample_config, in_memory_db):
+    @patch("main.run_full_health_check")
+    def test_success(self, mock_full_check, sample_config, in_memory_db):
         """ヘルスチェック成功。"""
-        mock_client = MagicMock()
-        account = MagicMock()
-        account.equity = "100000"
-        account.cash = "50000"
-        account.buying_power = "100000"
-        mock_client.get_account.return_value = account
-        mock_client.get_all_positions.return_value = []
+        mock_report = MagicMock()
+        mock_report.all_ok = True
+        mock_report.summary.return_value = "Health Check: 7/7 passed"
+        mock_full_check.return_value = mock_report
 
-        sm = _make_state_manager(sample_config, in_memory_db, mock_client)
-
-        with patch.dict(os.environ, {"ALPACA_PAPER": "true"}):
-            result = run_health_check(sm)
-
+        result = run_health_check(sample_config, in_memory_db)
         assert result is True
+        mock_full_check.assert_called_once_with(sample_config, in_memory_db)
 
-    def test_failure_not_paper(self, sample_config, in_memory_db):
-        """ALPACA_PAPER != true → 失敗。"""
-        mock_client = MagicMock()
-        sm = _make_state_manager(sample_config, in_memory_db, mock_client)
+    @patch("main.run_full_health_check")
+    def test_failure(self, mock_full_check, sample_config, in_memory_db):
+        """ヘルスチェック失敗。"""
+        mock_report = MagicMock()
+        mock_report.all_ok = False
+        mock_report.summary.return_value = "Health Check: 5/7 passed"
+        mock_full_check.return_value = mock_report
 
-        with patch.dict(os.environ, {"ALPACA_PAPER": "false"}):
-            result = run_health_check(sm)
-
-        assert result is False
-
-    def test_failure_api_error(self, sample_config, in_memory_db):
-        """API接続エラー → 失敗。"""
-        mock_client = MagicMock()
-        mock_client.get_account.side_effect = Exception("Connection refused")
-
-        sm = _make_state_manager(sample_config, in_memory_db, mock_client)
-
-        with patch.dict(os.environ, {"ALPACA_PAPER": "true"}):
-            result = run_health_check(sm)
-
+        result = run_health_check(sample_config, in_memory_db)
         assert result is False
 
 
@@ -312,6 +299,7 @@ class TestRunPipeline:
 
         assert result == 0
 
+    @patch("main.run_health_check")
     @patch("main.init_db")
     @patch("main.load_config")
     @patch("main.setup_logger")
@@ -320,30 +308,24 @@ class TestRunPipeline:
         mock_setup_logger,
         mock_load_config,
         mock_init_db,
+        mock_run_hc,
         sample_config,
         in_memory_db,
     ):
         """health_checkモード。"""
         mock_load_config.return_value = sample_config
         mock_init_db.return_value = in_memory_db
+        mock_run_hc.return_value = True
 
         with patch("main.AlpacaStateManager") as mock_sm_cls:
             mock_sm = MagicMock()
             mock_sm.check_execution_id.return_value = False
-            mock_sm.sync.return_value = PortfolioState(
-                equity=100000.0,
-                cash=50000.0,
-                buying_power=100000.0,
-                positions={},
-                daily_pnl_pct=0.0,
-                drawdown_pct=0.0,
-            )
             mock_sm_cls.return_value = mock_sm
 
-            with patch.dict(os.environ, {"ALPACA_PAPER": "true"}):
-                result = run_pipeline("health_check")
+            result = run_pipeline("health_check")
 
         assert result == 0
+        mock_run_hc.assert_called_once()
 
     @patch("main.init_db")
     @patch("main.load_config")
