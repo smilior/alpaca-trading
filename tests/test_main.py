@@ -56,12 +56,27 @@ class TestIsMarketOpen:
         result = is_market_open()
         assert isinstance(result, bool)
 
+    def test_force_market_open(self):
+        """FORCE_MARKET_OPEN=true で常にTrueを返す。"""
+        with patch.dict(os.environ, {"FORCE_MARKET_OPEN": "true"}):
+            result = is_market_open()
+            assert result is True
+
+    def test_force_market_open_false(self):
+        """FORCE_MARKET_OPEN=false では通常のカレンダーチェック。"""
+        with patch.dict(os.environ, {"FORCE_MARKET_OPEN": "false"}):
+            result = is_market_open()
+            assert isinstance(result, bool)
+
     def test_fallback_on_error(self):
         """エラー時はTrueを返す（フォールバック）。"""
         import exchange_calendars
 
-        with patch.object(exchange_calendars, "get_calendar", side_effect=Exception("error")):
-            result = is_market_open()
+        with patch.dict(os.environ, {"FORCE_MARKET_OPEN": ""}):
+            with patch.object(
+                exchange_calendars, "get_calendar", side_effect=Exception("error")
+            ):
+                result = is_market_open()
             assert result is True
 
 

@@ -56,7 +56,15 @@ def generate_execution_id(mode: str) -> str:
 
 
 def is_market_open() -> bool:
-    """市場オープン確認 (exchange_calendars)。"""
+    """市場オープン確認 (exchange_calendars)。
+
+    FORCE_MARKET_OPEN=true を設定すると時間外でもパイプラインを実行できる。
+    注文はキューに入り次の市場オープン時に執行される。
+    """
+    if os.environ.get("FORCE_MARKET_OPEN", "").lower() == "true":
+        logger.info("FORCE_MARKET_OPEN=true: bypassing market calendar check")
+        return True
+
     try:
         import exchange_calendars as xcals
 
