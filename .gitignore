@@ -20,6 +20,7 @@ __pycache__/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+.coverage
 *.egg-info/
 dist/
 build/
