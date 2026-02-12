@@ -4,47 +4,49 @@
 
 Alpaca APIを使った米国株の自動売買システム。cron + Claude CLIで自律的に動作するAIエージェントが市場を分析し、売買判断・執行を行う。まずペーパートレーディングで戦略を検証し、移行基準を満たしたらリアルマネーへ移行する。
 
-## 現在のフェーズ: Phase 1（環境構築・基盤整備）
+## 現在のフェーズ: Phase 5（ペーパートレーディング運用）準備完了
 
-技術仕様書: `docs/phase1-technical-spec.md`
+Phase 1〜4 の開発が完了。次のステップはペーパートレーディング環境での試運転。
 
-### Phase 1 タスク順序（依存関係順）
+### 完了済みフェーズ
 
-```
-[1] Python仮想環境 + 依存パッケージ (1h)
- ├─[2] .env + .gitignore + .env.example (0.5h)
- ├─[3] pyproject.toml (0.5h)
- └─[4] config.toml (1h)
-     ├─[5] modules/types.py — 型定義 (3h)
-     ├─[6] modules/config.py — pydantic-settings設定ローダー (3h)
-     ├─[7] modules/db.py — SQLite初期化+マイグレーション (4h)
-     └─[8] modules/logger.py — 構造化ロギング (1.5h)
-         └─[9] tests/ — conftest.py + 各テスト (4h)
-             └─[10] Alpaca API接続確認 (1.5h)
-```
+| Phase | 内容 | 状態 |
+|-------|------|------|
+| Phase 1 | 環境構築・基盤整備（config, DB, logging, types） | 完了 |
+| Phase 2 | データ収集・シグナル実装（market data, LLM analyzer, technical filters） | 完了 |
+| Phase 3 | リスク管理・注文実行（order executor, risk manager, state manager, main loop） | 完了 |
+| Phase 4 | 統合・テスト（health checks, backtest, stress test, launchd, integration tests） | 完了 |
 
-### Phase 1 完了条件
+### 品質指標
 
-- [ ] `pytest tests/` 全件パス（カバレッジ80%以上）
-- [ ] `mypy --strict modules/types.py` エラーなし
-- [ ] `ruff check . && ruff format --check .` エラーなし
-- [ ] config.toml バリデーション正常動作
-- [ ] SQLite DB 全9テーブル作成確認
-- [ ] ログファイル JSON Lines形式で出力確認
-- [ ] Alpaca ペーパートレーディングAPI疎通確認
-- [ ] `.env` が `.gitignore` に含まれgit管理外であること
+- テスト: 292件パス、カバレッジ92%
+- lint: `ruff check . && ruff format --check .` エラーなし
+- 型: `mypy --strict modules/types.py` エラーなし
 
-### Phase 1 主要ファイル
+### 主要ファイル一覧
 
-| ファイル | 内容 | 詳細仕様 |
-|---------|------|---------|
-| `modules/types.py` | dataclasses + Protocol（BarData, PortfolioState, TradingDecision等） | spec セクション6 |
-| `modules/config.py` | pydantic-settings AppConfig（型・値域バリデーション付き） | spec セクション4 |
-| `modules/db.py` | SQLite WAL初期化、9テーブルDDL、マイグレーション管理 | spec セクション5,8 |
-| `modules/logger.py` | JSON Lines、RotatingFileHandler（10MB x 5世代） | spec セクション7 |
-| `config.toml` | 全12+パラメータ（strategy/risk/macro/system/alpaca/alerts） | spec セクション4 |
+| ファイル | 内容 |
+|---------|------|
+| `main.py` | オーケストレーター（morning/midday/eod/health_check 4モード、ファイルロック、冪等性3層） |
+| `modules/types.py` | dataclasses + Protocol（BarData, PortfolioState, TradingDecision等） |
+| `modules/config.py` | pydantic-settings AppConfig（config.toml + .env バリデーション） |
+| `modules/db.py` | SQLite WAL初期化、9テーブルDDL、マイグレーション管理 |
+| `modules/logger.py` | JSON Lines、RotatingFileHandler（10MB x 5世代） |
+| `modules/data_collector.py` | Alpaca Market Data APIからOHLCV取得 + テクニカル指標計算 |
+| `modules/llm_analyzer.py` | Claude CLI連携、JSON Schema Validation、フォールバック戦略 |
+| `modules/technical.py` | SMA, RSI, ATR, 出来高比率、エントリーフィルター |
+| `modules/macro.py` | マクロレジーム判定（SPY vs 200日MA + VIX、2変数MVP） |
+| `modules/universe.py` | S&P500大型株30銘柄ユニバース |
+| `modules/order_executor.py` | ブラケット注文（limit entry + stop-limit SL + limit TP） |
+| `modules/risk_manager.py` | 4段階サーキットブレーカー、ポジションサイジング、セクター集中チェック |
+| `modules/state_manager.py` | Alpaca API ↔ SQLite 同期、リコンシリエーション、ポジションCRUD |
+| `modules/health.py` | 包括的ヘルスチェック（7項目: DB, API, 実行鮮度, CB, エラー, ディスク） |
+| `modules/backtest.py` | PurgedTimeSeriesSplit、Sharpe/Sortino/max DD、ブートストラップCI |
+| `modules/stress_test.py` | 5シナリオストレステスト（COVID-19, インフレ, SVB, 円キャリー, フラッシュクラッシュ） |
+| `config.toml` | 全パラメータ（strategy/risk/macro/system/alpaca/alerts） |
+| `deploy/launchd/` | 4 plist + setup.sh（DST対応、スリープ復帰対応） |
 
-### Phase 1 データスキーマ（9テーブル）
+### データスキーマ（9テーブル）
 
 positions, trades, daily_snapshots, execution_logs, circuit_breaker, strategy_params, reconciliation_logs, metrics, schema_version — 詳細DDLは `docs/phase1-technical-spec.md` セクション5参照。
 
@@ -100,5 +102,7 @@ positions, trades, daily_snapshots, execution_logs, circuit_breaker, strategy_pa
 - Python 3.11+ / alpaca-py SDK / SQLite（WALモード）
 - pydantic-settings（config.tomlバリデーション）
 - pytest + ruff + mypy（開発ツール）
-- Claude CLI（cron定期実行）
+- numpy（バックテスト・統計計算）
+- Claude CLI（cron/launchd定期実行）
 - データ: Alpaca Market Data, yfinance, FRED API
+- デプロイ: macOS launchd（`deploy/launchd/setup.sh` でインストール）
