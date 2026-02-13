@@ -2,6 +2,7 @@
 alpaca-py>=0.21.0,<1.0.0
 
 # 設定管理
+python-dotenv>=1.0.0,<2.0.0
 pydantic>=2.5.0,<3.0.0
 pydantic-settings>=2.1.0,<3.0.0
 
