@@ -191,7 +191,7 @@ def call_claude_with_validation(
         parsed = None
         try:
             result = subprocess.run(
-                ["claude", "-p", "--output-format", "json"],
+                ["claude", "-p"],
                 input=full_prompt,
                 capture_output=True,
                 text=True,
@@ -246,10 +246,10 @@ def _parse_decisions(
         except ValueError:
             action = Action.NO_ACTION
 
-        sentiment = d.get("sentiment_analysis", {})
+        sentiment = d.get("sentiment_analysis") or {}
         confidence = sentiment.get("confidence", 0)
-        trade_params = d.get("trade_parameters", {})
-        reasoning = d.get("reasoning_structured", {})
+        trade_params = d.get("trade_parameters") or {}
+        reasoning = d.get("reasoning_structured") or {}
 
         # 市場データからデフォルト値を取得
         bar = market_data.get(symbol)

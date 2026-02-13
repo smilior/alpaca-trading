@@ -30,7 +30,7 @@ atr_period = 14                        # ATR期間
 [system]
 db_path = "data/state/trading.db"
 log_dir = "logs"
-claude_timeout_seconds = 120           # Claude CLI タイムアウト (30-300)
+claude_timeout_seconds = 300           # Claude CLI タイムアウト (30-300)
 lock_file_path = "data/state/agent.lock"
 
 [alpaca]
