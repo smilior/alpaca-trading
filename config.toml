@@ -8,8 +8,8 @@ volume_compare_period = 20             # 出来高比較期間 (5-60)
 stop_loss_atr_multiplier = 2.0         # ストップロス ATR倍率 (0.5-5.0)
 take_profit_pct = 5.0                  # テイクプロフィット % (1.0-20.0)
 time_stop_days = 10                    # タイムストップ 営業日 (1-30)
-max_concurrent_positions = 5           # 最大同時ポジション数 (1-10)
-max_daily_entries = 2                  # 1日最大新規エントリー数 (1-5)
+max_concurrent_positions = 1           # カナリア期間: 最大1ポジション (通常時は5)
+max_daily_entries = 1                  # カナリア期間: 1日最大1エントリー (通常時は2)
 min_holding_days = 2                   # 最小保有日数 (0-10)
 
 [risk]

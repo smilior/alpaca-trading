@@ -76,20 +76,38 @@ DECISION_SCHEMA: dict = {
 }
 
 
+def _unwrap_cli_json(raw: str) -> str:
+    """Claude CLI の --output-format json ラッパーを解除する。
+
+    Claude CLI は {"type":"result","result":"..."} 形式で出力する。
+    result フィールドに実際のLLMレスポンスが格納されている。
+    """
+    try:
+        outer = json.loads(raw)
+        if isinstance(outer, dict) and "result" in outer:
+            return str(outer["result"])
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return raw
+
+
 def _extract_json(raw: str) -> dict | None:
     """生の出力からJSON部分を抽出する。"""
+    # Claude CLI ラッパー解除
+    text = _unwrap_cli_json(raw)
+
     # まず全体をパース
     try:
-        return json.loads(raw)
+        return json.loads(text)
     except json.JSONDecodeError:
         pass
 
     # 最初の '{' から最後の '}' を抽出
-    start = raw.find("{")
-    end = raw.rfind("}")
+    start = text.find("{")
+    end = text.rfind("}")
     if start != -1 and end != -1 and end > start:
         try:
-            return json.loads(raw[start : end + 1])
+            return json.loads(text[start : end + 1])
         except json.JSONDecodeError:
             pass
     return None
