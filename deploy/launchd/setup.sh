@@ -46,6 +46,7 @@ install() {
         # テンプレート変数を置換
         sed -e "s|__PROJECT_PATH__|${PROJECT_PATH}|g" \
             -e "s|__VENV_PATH__|${VENV_PATH}|g" \
+            -e "s|__HOME_PATH__|${HOME}|g" \
             "$src" > "$dest"
 
         # 既存のジョブをアンロードしてから登録

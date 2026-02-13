@@ -22,7 +22,7 @@
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>__VENV_PATH__/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>__VENV_PATH__/bin:__HOME_PATH__/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>
 </dict>
 </plist>
